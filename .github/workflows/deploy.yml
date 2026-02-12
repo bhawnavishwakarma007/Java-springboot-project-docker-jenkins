@@ -1,4 +1,4 @@
-name: Deploy Fullstack App
+name: Deploy to EC2 via SSH
 
 on:
   push:
@@ -6,50 +6,56 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout Code
-      uses: actions/checkout@v4
+    - name: Deploy Application
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
 
-    - name: Show Docker Version
-      run: docker --version
+          echo "🚀 Starting deployment"
 
-    # Build Backend
-    - name: Build Backend Image
-      run: |
-        cd backend
-        docker build -t springboot-backend .
+          cd ${{ secrets.APP_PATH }}
 
-    # Build Frontend
-    - name: Build Frontend Image
-      run: |
-        cd frontend
-        docker build -t streamlit-frontend .
+          echo "📥 Pull latest code"
+          git pull origin main
 
-    # Create Network
-    - name: Create Docker Network
-      run: docker network create app-network || true
+          echo "🐳 Build backend"
+          cd backend
+          docker build -t springboot-backend .
+          cd ..
 
-    # Run Backend
-    - name: Run Backend Container
-      run: |
-        docker stop backend || true
-        docker rm backend || true
-        docker run -d \
-          --name backend \
-          --network app-network \
-          -p 8084:8084 \
-          springboot-backend
+          echo "🐳 Build frontend"
+          cd frontend
+          docker build -t streamlit-frontend .
+          cd ..
 
-    # Run Frontend
-    - name: Run Frontend Container
-      run: |
-        docker stop frontend || true
-        docker rm frontend || true
-        docker run -d \
-          --name frontend \
-          --network app-network \
-          -p 8501:8501 \
-          streamlit-frontend
+          echo "🌐 Create network"
+          docker network create app-network || true
+
+          echo "🛑 Stop old containers"
+          docker stop backend || true
+          docker rm backend || true
+          docker stop frontend || true
+          docker rm frontend || true
+
+          echo "▶️ Start backend"
+          docker run -d \
+            --name backend \
+            --network app-network \
+            -p 8084:8084 \
+            springboot-backend
+
+          echo "▶️ Start frontend"
+          docker run -d \
+            --name frontend \
+            --network app-network \
+            -p 8501:8501 \
+            streamlit-frontend
+
+          echo "✅ Deployment complete"
