@@ -1,0 +1,55 @@
+name: Deploy Fullstack App
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Show Docker Version
+      run: docker --version
+
+    # Build Backend
+    - name: Build Backend Image
+      run: |
+        cd backend
+        docker build -t springboot-backend .
+
+    # Build Frontend
+    - name: Build Frontend Image
+      run: |
+        cd frontend
+        docker build -t streamlit-frontend .
+
+    # Create Network
+    - name: Create Docker Network
+      run: docker network create app-network || true
+
+    # Run Backend
+    - name: Run Backend Container
+      run: |
+        docker stop backend || true
+        docker rm backend || true
+        docker run -d \
+          --name backend \
+          --network app-network \
+          -p 8084:8084 \
+          springboot-backend
+
+    # Run Frontend
+    - name: Run Frontend Container
+      run: |
+        docker stop frontend || true
+        docker rm frontend || true
+        docker run -d \
+          --name frontend \
+          --network app-network \
+          -p 8501:8501 \
+          streamlit-frontend
