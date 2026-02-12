@@ -439,24 +439,21 @@ with tab2:
         
         search_name = st.text_input("👤 Enter Student Name", placeholder="Type the exact student name...")
         
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
+        col_btn1, col_btn2 = st.columns([1, 1])
         with col_btn1:
             search_btn = st.button("🔎 Search", use_container_width=True)
         with col_btn2:
-            delete_btn = st.button("🗑️ Delete", use_container_width=True, type="secondary")
-        
+            delete_btn = st.button("🗑️ Delete", use_container_width=True)
+
+        # ---------- SEARCH ----------
         if search_btn and search_name:
             try:
                 response = requests.get(f"{API_URL}/student/get/{search_name}")
                 if response.status_code == 200:
                     student = response.json()
-                    st.markdown("""
-                    <div class="info-card">
-                        <h3>✅ Student Found!</h3>
-                        <p>Here are the details for the student you searched:</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
+
+                    st.toast("Student found!", icon="🔍")
+
                     col_info1, col_info2 = st.columns(2)
                     with col_info1:
                         st.markdown(f"""
@@ -466,6 +463,7 @@ with tab2:
                             <div class="metric-label">Student Name</div>
                         </div>
                         """, unsafe_allow_html=True)
+
                     with col_info2:
                         st.markdown(f"""
                         <div class="metric-card">
@@ -474,46 +472,45 @@ with tab2:
                             <div class="metric-label">Age (Years)</div>
                         </div>
                         """, unsafe_allow_html=True)
+
                 else:
-                    st.warning(f"⚠️ No student found with the name '{search_name}'. Please check the spelling and try again.")
+                    st.toast("Student not found", icon="⚠️")
+
             except requests.exceptions.RequestException as e:
-                st.error(f"🔌 Connection Error: {e}")
-        
+                st.toast("Backend not reachable", icon="🚨")
+                st.error(str(e))
+
+        # ---------- DELETE WITH POPUP ----------
         if delete_btn and search_name:
             try:
                 response = requests.delete(f"{API_URL}/student/delete/{search_name}")
+
                 if response.status_code == 200:
-                    st.success(f"✅ Student '{search_name}' has been successfully removed from the database!")
+                    st.toast(f"🎉 Student '{search_name}' deleted successfully!", icon="🗑️")
                     st.snow()
+
+                    import time
+                    time.sleep(1)
+
                     st.rerun()
+
                 else:
-                    st.error(f"❌ Error: {response.text}")
+                    st.toast("Delete failed — student not found", icon="⚠️")
+
             except requests.exceptions.RequestException as e:
-                st.error(f"🔌 Connection Error: {e}")
-    
+                st.toast("Cannot connect to backend", icon="🚨")
+                st.error(str(e))
+
     with col2:
         st.markdown("""
         <div class="feature-card">
-            <div class="feature-icon">ℹ️</div>
-            <div class="feature-title">Search Instructions</div>
-            <div class="feature-desc">
-                1️⃣ Enter the exact student name<br>
-                2️⃣ Click "Search" to view details<br>
-                3️⃣ Click "Delete" to remove student<br>
-                4️⃣ Deletion is permanent - be careful!
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class="feature-card">
             <div class="feature-icon">⚠️</div>
-            <div class="feature-title">Important Notes</div>
+            <div class="feature-title">Important</div>
             <div class="feature-desc">
-                • Names are case-sensitive<br>
-                • Deleted records cannot be recovered<br>
-                • Use "View All" to see available names<br>
-                • Contact admin for bulk operations
+                • Enter exact name<br>
+                • Delete is permanent<br>
+                • Page auto refreshes<br>
+                • Popup confirms deletion
             </div>
         </div>
         """, unsafe_allow_html=True)
